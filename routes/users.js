@@ -3,52 +3,24 @@ const router = express.Router();
 const User = require("../models/user");
 const catchAsync = require("../utils/catchAsync");
 const passport = require("passport");
+const users = require("../controllers/users");
 
-router.get("/register", (req, res) => {
-  res.render("users/register");
-});
+router
+  .route("/register")
+  .get(users.renderRegister)
+  .post(catchAsync(users.register));
 
-router.post(
-  "/register",
-  catchAsync(async (req, res) => {
-    try {
-      const { username, email, password } = req.body;
-      const user = await new User({ email, username });
-      const registeredUser = await User.register(user, password);
-      req.login(registeredUser, (err) => {
-        if (err) return next(err);
-        req.flash("success", "Welcome to Yelp Camp!");
-        res.redirect("/campgrounds");
-      });
-    } catch (e) {
-      req.flash("error", e.message);
-      res.redirect("/register");
-    }
-  })
-);
+router
+  .route("/login")
+  .get(users.renderLogin)
+  .post(
+    passport.authenticate("local", {
+      failureFlash: true,
+      failureRedirect: "/login",
+    }),
+    users.login
+  );
 
-router.get("/login", (req, res) => {
-  res.render("users/login");
-});
-
-router.post(
-  "/login",
-  passport.authenticate("local", {
-    failureFlash: true,
-    failureRedirect: "/login",
-  }),
-  (req, res) => {
-    req.flash("success", "Welcome back!");
-    const redirectUrl = req.session.returnTo || "/campgrounds";
-    delete req.session.returnTo;
-    req.session.user_id = res.redirect(redirectUrl);
-  }
-);
-
-router.get("/logout", (req, res) => {
-  req.logout();
-  req.flash("success", "Logged out!");
-  res.redirect("/campgrounds");
-});
+router.get("/logout", users.logout);
 
 module.exports = router;
